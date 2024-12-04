@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School Safe Chat</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>School Safe Chat</h1>
+      <p>A monitored and safe space for students to communicate.</p>
+    </header>
+    <section id="login" class="section">
+      <h2>Login</h2>
+      <form id="login-form">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required>
+        <label for="role">Role:</label>
+        <select id="role" required>
+          <option value="student">Student</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Login</button>
+      </form>
+    </section>
+    <section id="chat" class="section hidden">
+      <h2>Group Chat</h2>
+      <div id="message-container"></div>
+      <form id="message-form">
+        <input type="text" id="message" placeholder="Enter your message" required>
+        <button type="submit">Send</button>
+        <button type="button" onclick="toggleEmojiPicker()">😊</button>
+        <div id="emoji-picker" class="hidden">
+          <span onclick="addEmoji('😊')">😊</span>
+          <span onclick="addEmoji('😂')">😂</span>
+          <span onclick="addEmoji('👍')">👍</span>
+          <!-- Add more emojis as needed -->
+        </div>
+      </form>
+    </section>
+    <section id="admin" class="section hidden">
+      <h2>Admin Monitoring</h2>
+      <div id="admin-container"></div>
+    </section>
+    <div id="notifications" class="hidden">
+      <p>Notification: <span id="notification-text"></span></p>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  
+  .container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 80%;
+    max-width: 800px;
+    animation: fadeIn 1s ease-in-out;
+  }
+  
+  header {
+    margin-bottom: 20px;
+  }
+  
+  .section {
+    display: none;
+    margin-top: 20px;
+  }
+  
+  .section.active {
+    display: block;
+  }
+  
+  #message-container, #admin-container {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: scroll;
+    margin-bottom: 10px;
+  }
+  
+  #message-form, #login-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #message-form input, #login-form input, #login-form select {
+    margin-bottom: 10px;
+  }
+  
+  #emoji-picker {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  
+  #emoji-picker span {
+    font-size: 24px;
+    cursor: pointer;
+    margin: 0 5px;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  #notifications {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #3498db;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    animation: slideIn 0.5s forwards;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('login-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const username = document.getElementById('username').value;
+      const role = document.getElementById('role').value;
+      if (username) {
+        localStorage.setItem('username', username);
+        localStorage.setItem('role', role);
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('chat').classList.add('active');
+        if (role === 'admin') {
+          document.getElementById('admin').classList.add('active');
+        }
+        loadMessages();
+      }
+    });
+  
+    document.getElementById('message-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const message = document.getElementById('message').value;
+      const username = localStorage.getItem('username');
+      if (message && username) {
+        const messageObject = { username, message, timestamp: new Date().toLocaleString() };
+        saveMessage(messageObject);
+        displayMessage(messageObject);
+        document.getElementById('message').value = '';
+      }
+    });
+  
+    function saveMessage(messageObject) {
+      let messages = JSON.parse(localStorage.getItem('messages')) || [];
+      messages.push(messageObject);
+      localStorage.setItem('messages', JSON.stringify(messages));
+      updateAdminView();
+    }
+  
+    function loadMessages() {
+      const messages = JSON.parse(localStorage.getItem('messages')) || [];
+      messages.forEach(displayMessage);
+    }
+  
+    function displayMessage({ username, message, timestamp }) {
+      const messageContainer = document.getElementById('message-container');
+      const messageElement = document.createElement('div');
+      messageElement.innerHTML = `<strong>${username}</strong>: ${message} <small>(${timestamp})</small>`;
+      if (localStorage.getItem('role') === 'admin') {
+        messageElement.innerHTML += ` <button onclick="reportMessage('${message}')">Report</button>`;
+      }
+      messageContainer.appendChild(messageElement);
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+  
+    function updateAdminView() {
+      const messages = JSON.parse(localStorage.getItem('messages')) || [];
+      const adminContainer = document.getElementById('admin-container');
+      adminContainer.innerHTML = '';
+      messages.forEach(({ username, message, timestamp }) => {
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<strong>${username}</strong>: ${message} <small>(${timestamp})</small>`;
+        adminContainer.appendChild(messageElement);
+      });
+    }
+  
+    window.toggleEmojiPicker = function() {
+      document.getElementById('emoji-picker').classList.toggle('hidden');
+    };
+  
+    window.addEmoji = function(emoji) {
+      const messageInput = document.getElementById('message');
+      messageInput.value += emoji;
+      document.getElementById('emoji-picker').classList.add('hidden');
+    };
+  
+    window.reportMessage = function(message) {
+      showNotification(`Message reported: ${message}`);
+      // Add reporting logic here (e.g., flag message in database or notify admin)
+    };
+  
+    // Check if user is already logged in
+    const savedUsername = localStorage.getItem('username');
+    const savedRole = localStorage.getItem('role');
+    if (savedUsername) {
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('chat').classList.add('active');
+      if (savedRole === 'admin') {
+        document.getElementById('admin').classList.add('active');
+      }
+      loadMessages();
+    }
+  });
+  
+  function showNotification(message) {
+    const notification = document.getElementById('notifications');
+    document.getElementById('notification-text').innerText = message;
+    notification.classList.remove('hidden');
+    setTimeout(() => {
+      notification.classList.add('hidden');
+    }, 3000);
+  }
+    
